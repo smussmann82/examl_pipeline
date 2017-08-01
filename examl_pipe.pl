@@ -21,7 +21,7 @@ if( scalar( @ARGV ) == 0 ){
 
 # take command line arguments
 my %opts;
-getopts( 'b:B:hp:t:', \%opts );
+getopts( 'b:B:hn:p:t:', \%opts );
 
 # if -h flag is used, or if no command line arguments were specified, kill program and print help
 if( $opts{h} ){
@@ -34,7 +34,7 @@ my $dir = getcwd(); # get current working directory
 chomp( $dir );
 
 # parse the command line
-my( $phy, $bin, $ntrees, $nboot ) = &parsecom( \%opts );
+my( $phy, $bin, $ntrees, $nboot, $np ) = &parsecom( \%opts );
 my $pfile = "raxml_commands"; #file to hold commands that will be sent to raxml
 my $bfile = "boot_commands";
 my $name = "StartingTree"; #basename for starting tree files
@@ -103,7 +103,7 @@ for( my $i=0; $i<$nboot; $i++ ){
 }
 
 for( my $i=0; $i<$nboot; $i++ ){
-	&runExaml( "bootfile.$i", "$dir/$bootbindir/boot_$i", "BOOT$i"  );
+	&runExaml( "bootfile.$i", "$dir/$bootbindir/boot_$i", "BOOT$i", $np  );
 }
 
 system("cat ExaML_result.BOOT* > all_boot_trees.txt");
@@ -124,7 +124,7 @@ sub help{
   print "To report bugs send an email to mussmann\@email.uark.edu\n";
   print "When submitting bugs please include all input files, options used for the program, and all error messages that were printed to the screen\n\n";
   print "Program Options:\n";
-  print "\t\t[ -b | -B | -h | -p | -t ]\n\n";
+  print "\t\t[ -b | -B | -h | -n | -p | -t ]\n\n";
   
   print "\t-b:\tSpecify the number of bootstrap replicates to be conducted\n";
   print "\t\tOptional.  Default=100.  Set to 0 to produce a tree without bootstrapping\n\n";
@@ -134,6 +134,9 @@ sub help{
 
   print "\t-h:\tUse this flag to display this help message.\n";
   print "\t\tProgram will exit after displaying the help message.\n\n";
+
+  print "\t-n:\tSpecify the number of processors.\n";
+  print "\t\tDefault = 44.\n\n";
 
   print "\t-p:\tUse this flag to display the input phylip file name.\n";
   print "\t\tProgram will exit if name is not provided.\n\n";
@@ -156,8 +159,9 @@ sub parsecom{
 	my $bin = $opts{B} || "spd";
 	my $ntrees = $opts{t} || "32";
 	my $nboot = $opts{b} || "100";
+	my $np = $opts{n} || "44";
 
-	return( $phy, $bin, $ntrees, $nboot );
+	return( $phy, $bin, $ntrees, $nboot, $np );
 
 }
 
@@ -181,7 +185,7 @@ sub startParallel{
 
 	for( my $i=0; $i<$ntrees; $i++ ){
 		my $rand = int(rand(2147483647));
-		print OUT "raxmlSSE3-serial -y -m GTRCAT -p $rand -s $file -n $name.$i -w $outdir\n";
+		print OUT "raxmlHPC -y -m GTRCAT -p $rand -s $file -n $name.$i -w $outdir\n";
 	}
 
 	close OUT;
@@ -206,20 +210,20 @@ sub gnuParallel{
 # subroutine to run a file through gnu parallel
 
 sub runExaml{
-	my( $parsconcat, $bin, $exaName ) = @_;
+	my( $parsconcat, $bin, $exaName, $np ) = @_;
 	
-	my $np = 0;
+	#my $np = 0;
 
-	my $nodefile = $ENV{'PBS_NODEFILE'};
-	open( NODE, $nodefile ) or die "Can't open $nodefile, d-bag: $!\n\n";
-	while( my $line = <NODE> ){
-		$np++;
-	}
-	close NODE;
+	#my $nodefile = $ENV{'PBS_NODEFILE'};
+	#open( NODE, $nodefile ) or die "Can't open $nodefile, d-bag: $!\n\n";
+	#while( my $line = <NODE> ){
+	#	$np++;
+	#}
+	#close NODE;
 	
 	print $np, "\n";
 
-	system("mpirun -np $np -machinefile $nodefile examlAVX -t $parsconcat -m PSR -s $bin.binary -n $exaName");
+	system("mpirun -np $np examl-OMP-AVX -t $parsconcat -m PSR -s $bin.binary -n $exaName");
 
 }
 #####################################################################################################
@@ -230,7 +234,7 @@ sub makeBootTrees{
 	
 	my $rand = int(rand(2147483647));
 
-	system( "raxmlSSE3-serial -# $nboot -b $rand -f j -m GTRCAT -s $file -n REPS -w $outdir" );
+	system( "raxmlHPC -# $nboot -b $rand -f j -m GTRCAT -s $file -n REPS -w $outdir" );
 
 }
 
@@ -258,7 +262,7 @@ sub makeBootTreeCommands{
 		if( $file =~ /BS(\d+)$/ ){
 			for( my $i=0; $i<$ntrees; $i++ ){
 				my $rand = int(rand(2147483647));
-				print OUT "raxmlSSE3-serial -y -m GTRCAT -p $rand -s $dir/$file -n bootstart.$1.$i -w $outdir_trees\n";
+				print OUT "raxmlHPC -y -m GTRCAT -p $rand -s $dir/$file -n bootstart.$1.$i -w $outdir_trees\n";
 			}
 		}
 	}
