@@ -62,7 +62,7 @@ mkpath( [$astral], 1, 0755 ) or die "Couldn't make directory to hold astral inpu
 
 system("cat $dir/$streedir/RAxML_parsimonyTree.$name.* > $pars_con_trees"); # concatenate starting trees into a single file
 
-&runExaml($pars_con_trees, $bin, "T1"); # run EXaML
+&runExaml($pars_con_trees, $bin, "T1", $np); # run EXaML
 
 
 &makeBootTrees( $nboot, $phy, "$dir/$bootdir" ); #generate RAxML commands for  pseudoreplicate phylip files for bootstrapping
@@ -71,7 +71,7 @@ system("cat $dir/$streedir/RAxML_parsimonyTree.$name.* > $pars_con_trees"); # co
 &makeBootTreeCommands( "$dir/$bootdir", $ntrees, $bfile, "$dir/$bootbindir", "$dir/$bootstartdir" );
 &gnuParallel( $bfile );
 
-opendir( WD, $dir ) or die "Can't open $dir, d-bag: $!\n\n";
+opendir( WD, $dir ) or die "Can't open $dir: $!\n\n";
 
 my @contents = readdir( WD );
 foreach my $file( @contents ){
@@ -87,11 +87,11 @@ closedir WD;
 
 for( my $i=0; $i<$nboot; $i++ ){
 	my $output = "bootfile.$i";
-	open( OUT, '>', $output ) or die "Can't open $output, d-bag: $!\n\n";
+	open( OUT, '>', $output ) or die "Can't open $output: $!\n\n";
 
 	for( my $j=0; $j<$ntrees; $j++ ){
 		my $input = "$dir/$bootstartdir/RAxML_parsimonyTree.bootstart.$i.$j";
-		open( IN, "$input" ) or die "Can't open $input, d-bag: $!\n\n";
+		open( IN, "$input" ) or die "Can't open $input: $!\n\n";
 		while( my $line = <IN> ){
 			chomp $line;
 			print OUT $line, "\n";
@@ -181,7 +181,7 @@ sub binaryConvert{
 sub startParallel{
 	my( $ntrees, $file, $name, $pfile, $outdir ) = @_; #$ntrees = number of starting trees, $file = phylip input file, $name = basename for output files, $pfile is text file that will contain raxml commands
 
-	open( OUT, '>', $pfile ) or die "Can't open $pfile, d-bag:$!\n\n";
+	open( OUT, '>', $pfile ) or die "Can't open $pfile:$!\n\n";
 
 	for( my $i=0; $i<$ntrees; $i++ ){
 		my $rand = int(rand(2147483647));
@@ -215,7 +215,7 @@ sub runExaml{
 	#my $np = 0;
 
 	#my $nodefile = $ENV{'PBS_NODEFILE'};
-	#open( NODE, $nodefile ) or die "Can't open $nodefile, d-bag: $!\n\n";
+	#open( NODE, $nodefile ) or die "Can't open $nodefile: $!\n\n";
 	#while( my $line = <NODE> ){
 	#	$np++;
 	#}
@@ -246,9 +246,9 @@ sub makeBootTreeCommands{
 
 
 	# get list of bootstrap files
-	opendir( WD, $dir ) or die "Can't open $dir, d-bag: $!\n\n";
+	opendir( WD, $dir ) or die "Can't open $dir: $!\n\n";
 
-	open( OUT, '>', $commandfile ) or die "Can't open $commandfile, d-bag: $!\n\n";
+	open( OUT, '>', $commandfile ) or die "Can't open $commandfile: $!\n\n";
 
 	my @contents = readdir( WD );
 	foreach my $file( @contents ){
